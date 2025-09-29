@@ -95,9 +95,8 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('Hello World!');
+    res.send('Plant Care Server is running');
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
+// ✅ Vercel এ app export করুন
+module.exports = app;
