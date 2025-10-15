@@ -93,12 +93,12 @@ run().catch(console.dir);
 
 // default route
 app.get('/', (req, res) => {
-  res.send('🌱 Plant Care Server is running successfully!');
+  res.send('Plant Care Server is running successfully!');
 });
 
 // Listen (for local + Vercel)
 app.listen(port, () => {
-  console.log(`🚀 Server is running on port ${port}`);
+  console.log(` Server is running on port ${port}`);
 });
 
 // Export (for Vercel serverless support)
