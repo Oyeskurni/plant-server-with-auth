@@ -21,85 +21,109 @@ const client = new MongoClient(uri, {
   },
 });
 
-async function run() {
+let plantsCollection;
+
+// ✅ Function to connect to MongoDB safely (for Vercel)
+async function connectDB() {
   try {
-    await client.connect();
+    if (!client.topology?.isConnected()) {
+      await client.connect();
+      console.log("✅ Connected to MongoDB");
+    }
     const database = client.db("plant-server");
-    const plantsCollection = database.collection("plants");
-
-    // POST: Add a new plant
-    app.post('/plants', async (req, res) => {
-      const newPlant = req.body;
-      const result = await plantsCollection.insertOne(newPlant);
-      res.send(result);
-    });
-
-    // GET: All plants
-    app.get('/plants', async (req, res) => {
-      const cursor = plantsCollection.find();
-      const plants = await cursor.toArray();
-      res.send(plants);
-    });
-
-    // GET: Single plant by ID
-    app.get('/plants/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const plant = await plantsCollection.findOne(query);
-      res.send(plant);
-    });
-
-    // PUT: Update plant
-    app.put('/plants/:id', async (req, res) => {
-      const id = req.params.id;
-      const updatedPlant = req.body;
-
-      const filter = { _id: new ObjectId(id) };
-      const options = { upsert: true };
-      const updateDoc = {
-        $set: {
-          plantName: updatedPlant.plantName,
-          plantImage: updatedPlant.plantImage,
-          plantCategory: updatedPlant.plantCategory,
-          wateringFrequency: updatedPlant.wateringFrequency,
-          ownerName: updatedPlant.ownerName,
-          plantDescription: updatedPlant.plantDescription,
-          careLevel: updatedPlant.careLevel,
-          healthStatus: updatedPlant.healthStatus,
-          lastWatered: updatedPlant.lastWatered,
-          nextWatering: updatedPlant.nextWatering,
-          email: updatedPlant.email
-        }
-      };
-      const result = await plantsCollection.updateOne(filter, updateDoc, options);
-      res.send(result);
-    });
-
-    // DELETE: Remove plant
-    app.delete('/plants/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await plantsCollection.deleteOne(query);
-      res.send(result);
-    });
-
-    await client.db("admin").command({ ping: 1 });
-    console.log("✅ Connected to MongoDB successfully!");
+    plantsCollection = database.collection("plants");
   } catch (error) {
-    console.error("❌ MongoDB connection failed:", error);
+    console.error("❌ MongoDB connection error:", error);
   }
 }
-run().catch(console.dir);
 
-// default route
+// ✅ Connect to database immediately
+connectDB();
+
+// POST: Add a new plant
+app.post('/plants', async (req, res) => {
+  try {
+    const newPlant = req.body;
+    const result = await plantsCollection.insertOne(newPlant);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Error adding plant", error });
+  }
+});
+
+// GET: All plants
+app.get('/plants', async (req, res) => {
+  try {
+    const cursor = plantsCollection.find();
+    const plants = await cursor.toArray();
+    res.send(plants);
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching plants", error });
+  }
+});
+
+// GET: Single plant by ID
+app.get('/plants/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const plant = await plantsCollection.findOne(query);
+    res.send(plant);
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching plant", error });
+  }
+});
+
+// PUT: Update plant
+app.put('/plants/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const updatedPlant = req.body;
+    const filter = { _id: new ObjectId(id) };
+    const options = { upsert: true };
+    const updateDoc = {
+      $set: {
+        plantName: updatedPlant.plantName,
+        plantImage: updatedPlant.plantImage,
+        plantCategory: updatedPlant.plantCategory,
+        wateringFrequency: updatedPlant.wateringFrequency,
+        ownerName: updatedPlant.ownerName,
+        plantDescription: updatedPlant.plantDescription,
+        careLevel: updatedPlant.careLevel,
+        healthStatus: updatedPlant.healthStatus,
+        lastWatered: updatedPlant.lastWatered,
+        nextWatering: updatedPlant.nextWatering,
+        email: updatedPlant.email
+      }
+    };
+    const result = await plantsCollection.updateOne(filter, updateDoc, options);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Error updating plant", error });
+  }
+});
+
+// DELETE: Remove plant
+app.delete('/plants/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await plantsCollection.deleteOne(query);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Error deleting plant", error });
+  }
+});
+
+// Default route
 app.get('/', (req, res) => {
-  res.send('Plant Care Server is running successfully!');
+  res.send('🌿 Plant Care Server is running successfully!');
 });
 
-// Listen (for local + Vercel)
+// Listen (for local)
 app.listen(port, () => {
-  console.log(` Server is running on port ${port}`);
+  console.log(`🚀 Server is running on port ${port}`);
 });
 
-// Export (for Vercel serverless support)
+// Export for Vercel serverless function
 module.exports = app;
