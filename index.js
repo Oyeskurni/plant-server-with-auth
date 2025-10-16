@@ -19,6 +19,7 @@ const client = new MongoClient(uri, {
     strict: true,
     deprecationErrors: true,
   },
+  connectTimeoutMS: 60000, // 60 seconds
 });
 
 let plantsCollection;
