@@ -1,3 +1,5 @@
+
+
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -11,7 +13,9 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cdpfqv1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cdpfqv1.mongodb.net/plant-server?retryWrites=true&w=majority&appName=Cluster0`;
+
+
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -19,7 +23,8 @@ const client = new MongoClient(uri, {
     strict: true,
     deprecationErrors: true,
   },
-  connectTimeoutMS: 60000, // 60 seconds
+  connectTimeoutMS: 120000, // 60 seconds
+  socketTimeoutMS: 120000,
 });
 
 let plantsCollection;
