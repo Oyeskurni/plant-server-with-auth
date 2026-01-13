@@ -11,40 +11,19 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cdpfqv1.mongodb.net/plant-server?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cdpfqv1.mongodb.net/?appName=Cluster0`;
 
-
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const plantsCollection = new MongoClient(uri).db("plantCareDB").collection("plants");
 
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  },
-  connectTimeoutMS: 120000, // 60 seconds
-  socketTimeoutMS: 120000,
+  }
 });
 
-let plantsCollection;
-
-// ✅ Function to connect to MongoDB safely (for Vercel)
-async function connectDB() {
-  try {
-    if (!client.topology?.isConnected()) {
-      await client.connect();
-      console.log("✅ Connected to MongoDB");
-    }
-    const database = client.db("plant-server");
-    plantsCollection = database.collection("plants");
-  } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
-  }
-}
-
-// ✅ Connect to database immediately
-connectDB();
-
-// POST: Add a new plant
 app.post('/plants', async (req, res) => {
   try {
     const newPlant = req.body;
@@ -118,6 +97,20 @@ app.delete('/plants/:id', async (req, res) => {
     res.status(500).send({ message: "Error deleting plant", error });
   }
 });
+async function run() {
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
+    await client.connect();
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+    // Ensures that the client will close when you finish/error
+    // await client.close();
+  }
+}
+run().catch(console.dir);
+
 
 // Default route
 app.get('/', (req, res) => {
