@@ -1,20 +1,21 @@
 const express = require('express');
-const app = express();
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
+const app = express();
 const port = process.env.PORT || 3001;
 
-// middleware
+// ======================
+// Middleware
+// ======================
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cdpfqv1.mongodb.net/?appName=Cluster0`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const plantsCollection = new MongoClient(uri).db("plantCareDB").collection("plants");
+// ======================
+// MongoDB Connection
+// ======================
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.cdpfqv1.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -24,6 +25,32 @@ const client = new MongoClient(uri, {
   }
 });
 
+let plantsCollection;
+
+async function connectDB() {
+  try {
+    await client.connect();
+    const db = client.db("plantCareDB");
+    plantsCollection = db.collection("plants");
+    console.log("✅ MongoDB Connected Successfully");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+  }
+}
+
+// Connect DB once
+connectDB();
+
+// ======================
+// Routes
+// ======================
+
+// Root route
+app.get('/', (req, res) => {
+  res.send('🌿 Plant Care Server is running successfully!');
+});
+
+// POST: Add a new plant
 app.post('/plants', async (req, res) => {
   try {
     const newPlant = req.body;
@@ -37,8 +64,7 @@ app.post('/plants', async (req, res) => {
 // GET: All plants
 app.get('/plants', async (req, res) => {
   try {
-    const cursor = plantsCollection.find();
-    const plants = await cursor.toArray();
+    const plants = await plantsCollection.find().toArray();
     res.send(plants);
   } catch (error) {
     res.status(500).send({ message: "Error fetching plants", error });
@@ -49,8 +75,7 @@ app.get('/plants', async (req, res) => {
 app.get('/plants/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
-    const plant = await plantsCollection.findOne(query);
+    const plant = await plantsCollection.findOne({ _id: new ObjectId(id) });
     res.send(plant);
   } catch (error) {
     res.status(500).send({ message: "Error fetching plant", error });
@@ -62,24 +87,12 @@ app.put('/plants/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const updatedPlant = req.body;
-    const filter = { _id: new ObjectId(id) };
-    const options = { upsert: true };
-    const updateDoc = {
-      $set: {
-        plantName: updatedPlant.plantName,
-        plantImage: updatedPlant.plantImage,
-        plantCategory: updatedPlant.plantCategory,
-        wateringFrequency: updatedPlant.wateringFrequency,
-        ownerName: updatedPlant.ownerName,
-        plantDescription: updatedPlant.plantDescription,
-        careLevel: updatedPlant.careLevel,
-        healthStatus: updatedPlant.healthStatus,
-        lastWatered: updatedPlant.lastWatered,
-        nextWatering: updatedPlant.nextWatering,
-        email: updatedPlant.email
-      }
-    };
-    const result = await plantsCollection.updateOne(filter, updateDoc, options);
+
+    const result = await plantsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedPlant }
+    );
+
     res.send(result);
   } catch (error) {
     res.status(500).send({ message: "Error updating plant", error });
@@ -90,37 +103,19 @@ app.put('/plants/:id', async (req, res) => {
 app.delete('/plants/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
-    const result = await plantsCollection.deleteOne(query);
+    const result = await plantsCollection.deleteOne({ _id: new ObjectId(id) });
     res.send(result);
   } catch (error) {
     res.status(500).send({ message: "Error deleting plant", error });
   }
 });
-async function run() {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
-  }
-}
-run().catch(console.dir);
 
-
-// Default route
-app.get('/', (req, res) => {
-  res.send('🌿 Plant Care Server is running successfully!');
-});
-
-// Listen (for local)
+// ======================
+// Server Listen
+// ======================
 app.listen(port, () => {
   console.log(`🚀 Server is running on port ${port}`);
 });
 
-// Export for Vercel serverless function
+// For Vercel
 module.exports = app;
